@@ -103,7 +103,7 @@ def create_quotation():
             date=data.get('date', datetime.now().date().isoformat()),
             time=data.get('time', datetime.now().time().strftime('%H:%M:%S')),
             issuer_details=data.get('issuer_details', {}),
-            company_id=data.get('company_id'),
+            company_id=int(data.get('company_id')) if data.get('company_id') and str(data.get('company_id')).isdigit() else None,
             company_name=data.get('company_name'),
             company_address=data.get('company_address'),
             company_gstin=data.get('company_gstin'),
@@ -208,6 +208,11 @@ def update_quotation(quote_id):
         for field in update_fields:
             if field in data:
                 setattr(quotation, field, data[field])
+        
+        # Handle company_id with sanitization for non-integer strings
+        if 'company_id' in data:
+            raw_company_id = data.get('company_id')
+            quotation.company_id = int(raw_company_id) if raw_company_id and str(raw_company_id).isdigit() else None
         
         # Handle sales order date
         if 'sales_order_date' in data and data['sales_order_date']:

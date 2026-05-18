@@ -947,11 +947,6 @@ export default function QuotationModal() {
 
   // Save or Update quotation to backend
   async function saveOrUpdateQuotation() {
-    if (!selectedCompanyId) {
-      alert("Please select a company first!");
-      return;
-    }
-    
     if (!billTo.trim()) {
       alert("Please enter Bill To information!");
       return;
@@ -963,6 +958,7 @@ export default function QuotationModal() {
     }
     
     const isUpdate = actionMode === 'edit' && currentQuotationId;
+    const finalCompanyId = selectedCompanyId || null;
     
     if (isUpdate) {
       setUpdating(true);
@@ -982,6 +978,7 @@ export default function QuotationModal() {
         .join(" ");
       
       return {
+        ...(isUpdate && item.id ? { id: item.id } : {}),
         item_name: item.item_name,
         hsn_sac: item.hsn_sac,
         supplier_part_no: item.supplier_part_no || item.brand_code || "",
@@ -1008,7 +1005,7 @@ export default function QuotationModal() {
       date: date,
       time: time,
       issuer_details: issuer,
-      company_id: selectedCompanyId,
+      company_id: (finalCompanyId && typeof finalCompanyId === 'string' && finalCompanyId.startsWith('temp-')) ? null : finalCompanyId,
       company_name: billTo,
       company_address: companyAddress,
       company_gstin: companyGstin,
@@ -1024,7 +1021,7 @@ export default function QuotationModal() {
       grand_total_with_gst: totals.grandTotalWithGST,
       notes: notes || `Please process this quote as per the terms mentioned.\nAll prices are in INR.\nDelivery within 7-10 business days.`,
       requote_note: requoteNote,
-      status: actionMode === 'edit' ? "draft" : "draft",
+      ...(isUpdate ? {} : { status: "draft" }),
       items: preparedItems,
       created_by: "User",
       updated_by: "User"
@@ -1177,6 +1174,10 @@ export default function QuotationModal() {
   // Print quotation - UPDATED with tax on left and no profit
   function printQuotation(quotation) {
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Please allow pop-ups to print this quotation.");
+      return;
+    }
     
     const items = quotation.items || [];
     
@@ -3285,7 +3286,7 @@ export default function QuotationModal() {
                       const isCompleted = quote.status?.toLowerCase() === 'completed';
                       const isDraft = quote.status?.toLowerCase() === 'draft';
                       const isRequote = quote.status?.toLowerCase() === 'requote';
-                      const totalWithGST = quote.grand_total_with_gst || quote.grand_total || 0;
+                      const totalWithGST = Number(quote.grand_total_with_gst || quote.grand_total || 0);
                       
                       return (
                         <tr key={quote.id}>
@@ -3332,35 +3333,13 @@ export default function QuotationModal() {
                                 <i className="bi bi-eye"></i>
                               </button>
                               
-                              {!isCompleted && (
-                                <button
-                                  className="btn btn-outline-warning"
-                                  onClick={() => startEditQuotation(quote)}
-                                  title="Edit"
-                                >
-                                  <i className="bi bi-pencil"></i>
-                                </button>
-                              )}
-                              
-                              {!isCompleted && (
-                                <button
-                                  className="btn btn-outline-primary"
-                                  onClick={() => startCreateReQuote(quote)}
-                                  title="Re-quote"
-                                >
-                                  <i className="bi bi-arrow-repeat"></i>
-                                </button>
-                              )}
-                              
-                              {!isCompleted && (
-                                <button
-                                  className="btn btn-outline-success"
-                                  onClick={() => markAsCompleted(quote.id)}
-                                  title="Complete"
-                                >
-                                  <i className="bi bi-check-circle"></i>
-                                </button>
-                              )}
+                              <button
+                                className="btn btn-outline-warning"
+                                onClick={() => startEditQuotation(quote)}
+                                title="Edit"
+                              >
+                                <i className="bi bi-pencil"></i>
+                              </button>
                               
                               <button
                                 className="btn btn-outline-secondary"
@@ -3369,16 +3348,6 @@ export default function QuotationModal() {
                               >
                                 <i className="bi bi-printer"></i>
                               </button>
-                              
-                              {!isCompleted && (
-                                <button
-                                  className="btn btn-outline-danger"
-                                  onClick={() => deleteQuotation(quote.id)}
-                                  title="Delete"
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              )}
                             </div>
                           </td>
                         </tr>
